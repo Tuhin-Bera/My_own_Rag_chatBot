@@ -1,0 +1,124 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block title %}Chat{% endblock %}
+
+{% block body %}
+<div class="chat-page">
+    <!-- Sidebar -->
+    <aside class="sidebar glass-panel" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-sm">
+                <div class="logo-icon-sm">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#grad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <defs><linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#8b5cf6"/><stop offset="100%" style="stop-color:#06b6d4"/></linearGradient></defs>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                </div>
+                <span class="logo-text-sm">DocuMind <span class="logo-ai">AI</span></span>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h4 class="sidebar-label">Uploaded Documents</h4>
+            <ul class="doc-list">
+                {% for file in pdf_files %}
+                <li class="doc-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span class="doc-name" title="{{ file }}">{{ file }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="doc-stats">
+                <span class="stat-badge">{{ num_chunks }} chunks indexed</span>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-bar" style="padding: 0; background: none; border: none; margin-bottom: 0.75rem;">
+                <div class="user-info">
+                    <div class="user-avatar-sm">{{ user.first_name|default:user.username|make_list|first|upper }}</div>
+                    <span>{{ user.first_name|default:user.username }}</span>
+                </div>
+                <a href="{% url 'logout' %}" class="logout-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
+                </a>
+            </div>
+            <a href="{% url 'reset_page' %}" class="new-session-btn" onclick="return confirm('Start a new session? Current chat history will be lost.')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                New Session
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile sidebar toggle -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+
+    <!-- Chat Main -->
+    <main class="chat-main">
+        <!-- Messages Area -->
+        <div class="messages-container" id="messages-container">
+            <div class="messages" id="messages">
+
+                <!-- Welcome message -->
+                <div class="message assistant-message fade-in">
+                    <div class="message-avatar assistant-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-sender">DocuMind AI</div>
+                        <div class="message-text">
+                            <p>👋 Hello! I've processed <strong>{{ pdf_files|length }} document{{ pdf_files|length|pluralize }}</strong> with <strong>{{ num_chunks }} text chunks</strong> indexed and ready to search.</p>
+                            <p>Ask me anything about your documents! I'll find the most relevant information and give you a detailed answer.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Render existing chat history -->
+                {% for msg in chat_history %}
+                <div class="message {% if msg.role == 'user' %}user-message{% else %}assistant-message{% endif %} fade-in">
+                    <div class="message-avatar {% if msg.role == 'user' %}user-avatar{% else %}assistant-avatar{% endif %}">
+                        {% if msg.role == 'user' %}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {% else %}
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        {% endif %}
+                    </div>
+                    <div class="message-content">
+                        <div class="message-sender">{% if msg.role == 'user' %}You{% else %}DocuMind AI{% endif %}</div>
+                        <div class="message-text">{{ msg.content }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area glass-panel-bottom">
+            <form id="chat-form" class="chat-input-form">
+                <div class="input-group">
+                    <textarea id="chat-input" placeholder="Ask a question about your documents..." rows="1" autofocus></textarea>
+                    <button type="submit" class="send-btn" id="send-btn" title="Send message">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+                <p class="input-hint">Press <kbd>Enter</kbd> to send • <kbd>Shift+Enter</kbd> for new line</p>
+            </form>
+        </div>
+    </main>
+</div>
+
+<!-- CSRF Token for AJAX -->
+<script>
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+    window.CHAT_API_URL = "{% url 'chat_api' %}";
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'chat/js/chat.js' %}"></script>
+{% endblock %}
