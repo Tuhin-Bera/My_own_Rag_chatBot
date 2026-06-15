@@ -1,5 +1,7 @@
 # Django RAG ChatBot
 
+**Live Demo:** [https://my-own-rag-chatbot.onrender.com](https://my-own-rag-chatbot.onrender.com)
+
 A Retrieval-Augmented Generation (RAG) web application built with Django, LangChain, and Groq. This application allows users to upload PDF documents and ask questions based on the content of those documents using a large language model.
 
 ## Features
