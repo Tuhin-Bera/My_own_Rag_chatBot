@@ -17,7 +17,7 @@ from django.conf import settings
 # Langchain imports for document processing and RAG pipeline
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
 from langchain_core.prompts import (
@@ -76,13 +76,19 @@ _embedding_model = None
 
 
 def get_embedding_model():
-    """Return (and lazily initialise) the shared FastEmbed embedding model."""
+    """Return (and lazily initialise) the shared HuggingFace cloud embedding model."""
     global _embedding_model
     if _embedding_model is None:
-        # FastEmbed Embeddings run locally using ONNX, avoiding the need for heavy 
-        # PyTorch dependencies and keeping memory usage low.
-        _embedding_model = FastEmbedEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
+        # HuggingFace Endpoint Embeddings run on Hugging Face's cloud servers,
+        # completely avoiding the Out Of Memory crashes on Render.
+        hf_token = getattr(settings, "HF_TOKEN", "")
+        if not hf_token:
+            raise ValueError("HF_TOKEN environment variable is not set. Please configure it in your environment.")
+            
+        _embedding_model = HuggingFaceEndpointEmbeddings(
+            model=EMBEDDING_MODEL_NAME,
+            task="feature-extraction",
+            huggingfacehub_api_token=hf_token,
         )
     return _embedding_model
 

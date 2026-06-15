@@ -131,6 +131,9 @@ CHROMA_DB_DIR = BASE_DIR / "chroma_stores"
 # Default Groq API key (read from environment, but can be overridden by users in the UI).
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
+# Hugging Face API token for cloud embeddings
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+
 # Authentication redirection settings
 LOGIN_URL = "/auth/login/"
 LOGIN_REDIRECT_URL = "/"
