@@ -14,6 +14,7 @@ A Retrieval-Augmented Generation (RAG) web application built with Django, LangCh
 
 - Python 3.9+
 - A [Groq API Key](https://console.groq.com/) for the LLM.
+- A [Hugging Face Access Token](https://huggingface.co/settings/tokens) for generating cloud embeddings.
 
 ## Local Development Setup
 
@@ -41,6 +42,7 @@ A Retrieval-Augmented Generation (RAG) web application built with Django, LangCh
    Create a `.env` file in the root of your project and add the following:
    ```env
    GROQ_API_KEY=your_groq_api_key_here
+   HF_TOKEN=your_huggingface_api_token_here
    SECRET_KEY=your_secure_django_secret_key
    DEBUG=True
    ALLOWED_HOSTS=*
@@ -69,6 +71,7 @@ This project is fully configured for deployment on **Render** as a "Web Service"
 1. **Connect your GitHub:** Create a new "Web Service" on Render and link your GitHub repository.
 2. **Environment Configuration:** In the Render dashboard, add the following Environment Variables:
    - `GROQ_API_KEY`: Your Groq API key
+   - `HF_TOKEN`: Your Hugging Face API token (Required for cloud embeddings to prevent Out of Memory errors on the free tier)
    - `SECRET_KEY`: A long, randomly generated secure string
    - `DEBUG`: `False`
    - `ALLOWED_HOSTS`: `*` (or your specific render domain like `.onrender.com`)
