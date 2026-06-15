@@ -6,6 +6,7 @@ This file contains the main logic for rendering pages and handling API requests.
 import json
 import os
 import traceback
+import uuid
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -97,8 +98,10 @@ def upload_view(request):
             file_names.append(f.name)
 
         # Process the PDFs (extract text, chunk it, embed it, and store in ChromaDB)
+        # We use a unique directory ID for Chroma to prevent SQLite caching errors (1032)
+        chroma_dir_name = f"{session_id}_{uuid.uuid4().hex[:8]}"
         try:
-            num_chunks = rag_service.process_pdfs(saved_paths, session_id)
+            num_chunks = rag_service.process_pdfs(saved_paths, chroma_dir_name)
         except Exception as e:
             traceback.print_exc() # Print the full error stack to the console for debugging
             return render(request, "chat/upload.html", {
@@ -107,6 +110,7 @@ def upload_view(request):
             })
 
         # If successful, store the metadata in the user's session.
+        request.session["chroma_dir"] = chroma_dir_name
         request.session["groq_api_key"] = groq_key
         request.session["pdf_files"] = file_names
         request.session["num_chunks"] = num_chunks
@@ -151,10 +155,11 @@ def reset_view(request):
     session_id = _ensure_session(request)
     
     # Delete the ChromaDB vector store and uploaded PDFs from disk for this session.
-    rag_service.clear_session_data(session_id)
+    chroma_dir = request.session.get("chroma_dir")
+    rag_service.clear_session_data(session_id, chroma_dir)
 
     # Remove all session variables related to the chat context.
-    for key in ["groq_api_key", "pdf_files", "num_chunks", "documents_ready", "chat_history"]:
+    for key in ["groq_api_key", "pdf_files", "num_chunks", "documents_ready", "chat_history", "chroma_dir"]:
         request.session.pop(key, None)
 
     return redirect("upload_page")
@@ -193,8 +198,9 @@ def chat_api(request):
         return JsonResponse({"error": "Please enter a question."}, status=400)
 
     # Pass the question to our RAG service to query the LLM.
+    chroma_dir = request.session.get("chroma_dir")
     try:
-        answer = rag_service.ask_question(question, session_id, groq_key)
+        answer = rag_service.ask_question(question, chroma_dir, groq_key)
     except Exception as e:
         traceback.print_exc()
         error_msg = str(e)

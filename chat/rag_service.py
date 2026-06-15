@@ -97,14 +97,16 @@ def get_embedding_model():
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _chroma_path(session_id: str) -> str:
+def _chroma_path(chroma_dir_name: str) -> str:
     """
     Return the on-disk path for a session's ChromaDB store.
     Each user gets their own isolated vector database folder based on their session ID.
     """
+    if not chroma_dir_name:
+        raise ValueError("chroma_dir_name must be provided")
     base = getattr(settings, "CHROMA_DB_DIR", settings.BASE_DIR / "chroma_stores")
     os.makedirs(base, exist_ok=True)
-    return str(os.path.join(base, session_id))
+    return str(os.path.join(base, chroma_dir_name))
 
 
 def _build_prompt_template() -> ChatPromptTemplate:
@@ -138,7 +140,7 @@ def _build_prompt_template() -> ChatPromptTemplate:
 # Public API
 # ---------------------------------------------------------------------------
 
-def process_pdfs(pdf_paths: list, session_id: str):
+def process_pdfs(pdf_paths: list, chroma_dir_name: str):
     """
     Load PDFs, split into chunks, embed, and persist to ChromaDB.
 
@@ -146,8 +148,8 @@ def process_pdfs(pdf_paths: list, session_id: str):
     ----------
     pdf_paths : list[str]
         Absolute paths to uploaded PDF files.
-    session_id : str
-        Unique session identifier (used as ChromaDB collection directory).
+    chroma_dir_name : str
+        Unique identifier (used as ChromaDB collection directory).
 
     Returns
     -------
@@ -182,11 +184,11 @@ def process_pdfs(pdf_paths: list, session_id: str):
     embedding_fn = get_embedding_model()
 
     # 4. Create / populate ChromaDB in batches
-    persist_dir = _chroma_path(session_id)
+    persist_dir = _chroma_path(chroma_dir_name)
 
-    # If there's already a store for this session, remove it first to avoid mixing old/new data.
-    if os.path.exists(persist_dir):
-        shutil.rmtree(persist_dir)
+    # We NO LONGER delete the directory here using shutil.rmtree. 
+    # Deleting it causes a ChromaDB caching bug (attempt to write a readonly database code: 1032)
+    # Instead, views.py passes a uniquely generated chroma_dir_name every time!
 
     vector_db = None
     num_batches = (len(chunks) - 1) // BATCH_SIZE + 1
@@ -210,7 +212,7 @@ def process_pdfs(pdf_paths: list, session_id: str):
     return len(chunks)
 
 
-def ask_question(question: str, session_id: str, groq_api_key: str) -> str:
+def ask_question(question: str, chroma_dir_name: str, groq_api_key: str) -> str:
     """
     Run the RAG chain: retrieve relevant chunks → prompt → LLM → answer.
 
@@ -218,8 +220,8 @@ def ask_question(question: str, session_id: str, groq_api_key: str) -> str:
     ----------
     question : str
         The user's question.
-    session_id : str
-        Session identifier to locate the correct ChromaDB store.
+    chroma_dir_name : str
+        Unique identifier to locate the correct ChromaDB store.
     groq_api_key : str
         Groq API key for the LLM.
 
@@ -228,7 +230,10 @@ def ask_question(question: str, session_id: str, groq_api_key: str) -> str:
     str
         The LLM's answer.
     """
-    persist_dir = _chroma_path(session_id)
+    if not chroma_dir_name:
+        return "No documents have been uploaded yet. Please go back and upload your PDFs first."
+
+    persist_dir = _chroma_path(chroma_dir_name)
     if not os.path.exists(persist_dir):
         return "No documents have been uploaded yet. Please go back and upload your PDFs first."
 
@@ -270,12 +275,13 @@ def ask_question(question: str, session_id: str, groq_api_key: str) -> str:
     return answer
 
 
-def clear_session_data(session_id: str):
+def clear_session_data(session_id: str, chroma_dir_name: str = None):
     """Delete the ChromaDB store and uploaded files for a session."""
-    # Delete vector database directory
-    persist_dir = _chroma_path(session_id)
-    if os.path.exists(persist_dir):
-        shutil.rmtree(persist_dir)
+    # Delete vector database directory (if known)
+    if chroma_dir_name:
+        persist_dir = _chroma_path(chroma_dir_name)
+        if os.path.exists(persist_dir):
+            shutil.rmtree(persist_dir)
 
     # Delete the actual uploaded PDFs
     media_session_dir = os.path.join(settings.MEDIA_ROOT, "pdfs", session_id)
