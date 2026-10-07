@@ -38,7 +38,7 @@ from langchain_core.output_parsers import StrOutputParser
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 # The Groq model we will query. Llama 3.3 70B provides excellent reasoning.
-LLM_MODEL_NAME = "llama-3.3-70b-versatile"
+LLM_MODEL_NAME = "openai/gpt-oss-120b"
 
 # How large each chunk of text should be when splitting the PDF.
 CHUNK_SIZE = 500
